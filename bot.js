@@ -1,9 +1,19 @@
 import express from 'express';
 const bot = express();
+import dotenv from 'dotenv';
+dotenv.config();
 import morgan from 'morgan';
 import fs from 'fs';
 import path from 'path';
 import axios from 'axios';
+import mongoose from 'mongoose';
+
+mongoose.connect("mongodb://localhost/genio", {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
+.then(data=>console.log('connection to Genio DB succeeded!!!'))
+.catch(err=>console.log(err))
 
 bot.use(express.json());
 const writeFile = fs.createWriteStream(path.join(__dirname, "/server.log"), {
@@ -39,13 +49,24 @@ bot.get('/', (req, res)=> {
     })
 })
 
-bot.post('/', (req, res)=> {
-    let data = req.body;
-    console.log(data);
-    if(data.messages && data.messages[0].body.length > 0) {
-        axiost.post(`http://localhost:8000/83430/sendMessage?token=${process.env.token}`);
+bot.post('/', async(req, res)=> {
+    try {
+        let data = req.body;
+        console.log(data);
+        if (data.messages && data.messages[0].body.length > 0) {
+        axios.post(
+          `http://localhost:8000/83430/sendMessage?token=${process.env.token}`,
+          {
+            phone: `${parseInt(data.messages[0].author)}`,
+            body: `Hey! ${data.messages[0].chatName} I am Genio \n`,
+          }
+        );
+        }
+        res.end();
+    }catch(err) {
+        console.log(err);
+        res.end();
     }
-    res.end();
 })
 
 process.env.NODE_ENV === "development"
