@@ -43,7 +43,7 @@ bot.post('/', (req, res)=> {
     let data = req.body;
     console.log(data);
     if(data.messages && data.messages[0].body.length > 0) {
-
+        axiost.post(`http://localhost:8000/83430/sendMessage?token=${process.env.token}`);
     }
     res.end();
 })
