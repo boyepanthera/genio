@@ -1,0 +1,20 @@
+{
+  "name": "geniobot",
+  "version": "1.0.0",
+  "description": "Intelligent whatsapp bot",
+  "main": "bot.js",
+  "author": "Olanrewaju A. Olaboye",
+  "scripts": {
+    "start": "nodemon -r esm bot.js",
+    "start:dev": "cross-env NODE_ENV=development nodemon -r esm bot.js"
+  },
+  "license": "MIT",
+  "private": false,
+  "dependencies": {
+    "cross-env": "^7.0.2",
+    "esm": "^3.2.25",
+    "express": "^4.17.1",
+    "morgan": "^1.10.0",
+    "nodemon": "^2.0.3"
+  }
+}
