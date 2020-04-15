@@ -53,12 +53,16 @@ bot.post('/', async(req, res)=> {
     try {
         let data = req.body;
         console.log(data);
+        let greetings = ['Hello', 'My Buddy', 'Hey', 'Wonderful', 'The great', 'My Person', 'Hi', 'Hii'];
+        let closeGreetings = ['Wetin dey?', 'How far?', 'Xup?', 'How are you doing?'];
+        let random = Math.floor(Math.random() * greetings.length);
+        let closeRandom = Math.floor(Math.random() * closeGreetings.length);
         if (data.messages && data.messages[0].body.length > 0) {
         axios.post(
           `http://localhost:8000/83430/sendMessage?token=${process.env.token}`,
           {
             phone: `${parseInt(data.messages[0].author)}`,
-            body: `Hey! ${data.messages[0].chatName} I am Genio \n`,
+            body: `${greetings[random]} ${data.messages[0].chatName} \n${closeGreetings[closeRandom]} \n\nI am Genio \n`,
           }
         );
         }
