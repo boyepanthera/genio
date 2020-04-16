@@ -53,15 +53,20 @@ bot.post('/', async(req, res)=> {
     try {
         let data = req.body;
         console.log(data);
-        let searchKeywords = ['hi' , 'hello', 'hii', 'hy' , 'hey', 'hello', 'xup', 'yo', 'yoh'];
-        let greetings = ['Hello', 'My Buddy', 'Hey', 'Wonderful', 'The great', 'My Person', 'Hi', 'Hii'];
+        let searchKeywords = ['hi' , 'hello', 'hii', 'hy' , 'hey', 'heyy', 'hello', 'xup', 'yo', 'yoh'];
+        let greetings = ['Hello', 'My Buddy', 'Hey', 'Wonderful', 'The great', 'My Person', 'Hi', 'Hii', 'Heyy'];
         let closeGreetings = ['Wetin dey?', 'How far?', 'Xup?', 'How are you doing?'];
         let random = Math.floor(Math.random() * greetings.length);
         let closeRandom = Math.floor(Math.random() * closeGreetings.length);
-        let starter = data.messages[0].body.toLowerCase().split(' ');
+        let starter; 
+        if(data.messages){
+          starter = data.messages[0].body.toLowerCase().split(" ");
+        }
+
         if (
-          (data.messages[0].body.length > 0 &&
-            searchKeywords.includes(starter[0]))
+          data.messages &&
+          data.messages[0].body && data.messages[0].body.length > 0 &&
+          searchKeywords.includes(starter[0])
         ) {
           axios.post(
             `http://localhost:8000/83430/sendMessage?token=${process.env.token}`,
@@ -74,18 +79,24 @@ bot.post('/', async(req, res)=> {
             \n*1. Genio-Status* \nUsage: You send Genio-Status \nWith this I can help you upload your content to my status, and keep a Record of your shared status. 
             \n*2. Genio-Covid19* \nSend you information about Coronavirus\nSend me: Genio-Covid <CountryName> to get Covid-Data about the country
             \n*3. Genio-Util* \nSend me this to send you procedure for getting your payment for utilities all sorted here on whatsapp.
-            \n*4. Genio-Group* - Share your messages to groups.\nAdd me to two groups and I can help you share messages from one group to the other you don't need a telegram version of your group again.
+            \n*4. Genio-Share* - Share your messages to groups.\nAdd me to two groups and I can help you share messages from one group to the other you don't need a telegram version of your group again.
             \nYou can send the text or the number to enter the mode of operation you want.
-            \n\n🕵️‍♀️ *I am Genio*, and I am here to serve you.\n`,
+            \n\n🕵️‍♀️ *I am Genio*, and I am here to serve you.🏋️‍♀️\n`,
             }
           );
         }
+      let modeKeywords = ['genio-status', 'genio-util', 'genio-covid19', 'genio-share'];
+      let modeCheck = data.messages.body.toLowerCase().split(' ');
+      if (
+          data.messages &&
+          data.messages[0].body &&
+          data.messages[0].body.length > 0 &&
+          modeKeywords.includes(modeCheck[0])
+      ) {
 
-        // if (data.messages[0].body &&  data.messages[0].body.toLowercase().search('genio-covid19')>-1) {
-
-        // }
-        
-        res.end();
+      }
+      
+      res.end();
     }catch(err) {
         console.log(err);
         res.end();
