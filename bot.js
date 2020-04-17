@@ -87,15 +87,47 @@ bot.post('/', async(req, res)=> {
         }
       let modeKeywords = ['genio-status', 'genio-util', 'genio-covid19', 'genio-share'];
       let modeCheck = data.messages.body.toLowerCase().split(' ');
+
+      // Response for Genio Status Mode
       if (
           data.messages &&
           data.messages[0].body &&
           data.messages[0].body.length > 0 &&
-          modeKeywords.includes(modeCheck[0])
+          modeKeywords.includes(modeCheck[0]) && 
+          (modeCheck[0] ==='genio-status' || parseInt(modeCheck[0])===1)
       ) {
+        axios.post(
+          `http://localhost:8000/83430/sendMessage?token=${process.env.token}`, {
+            phone: `${parseInt(data.messages[0].author)}`,
+            body: `
+              I am ready to execute your Status update task.
+              \nsend me your content in the following format:
+              \n\n11
+
+              \nYour content...
+              \n\nYour Name
+              `
+          }
+        );
 
       }
-      
+
+      // Response for After Getting and Uploading status content
+      if (
+          data.messages &&
+          data.messages[0].body &&
+          data.messages[0].body.length > 0 &&
+          (modeCheck[0] ==='genio-status-body' || parseInt(modeCheck[0])===11)
+      ) {
+        axios.post(
+          `http://localhost:8000/83430/setMyStatus?token=${process.env.token}`,
+          {
+            newStatus: data.messages[0].body,
+          }
+        )
+        .then(upload=> console.log(upload))
+        .catch(err=>console.log(err))
+      }
       res.end();
     }catch(err) {
         console.log(err);
