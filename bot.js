@@ -7,6 +7,10 @@ import fs from 'fs';
 import path from 'path';
 import axios from 'axios';
 import mongoose from 'mongoose';
+import Status from './models/Status';
+import countries from './countries';
+let countryStr ='';
+countries.forEach((country, i)=> countryStr+= `${i+1}. ${country}\n`)
 
 mongoose.connect("mongodb://localhost/genio", {
   useNewUrlParser: true,
@@ -63,10 +67,11 @@ bot.post('/', async(req, res)=> {
           starter = data.messages[0].body.toLowerCase().split(" ");
         }
 
+        // For sending base message
         if (
           data.messages &&
           data.messages[0].body && data.messages[0].body.length > 0 &&
-          searchKeywords.includes(starter[0])
+          (searchKeywords.includes(starter[0]) || parseInt(data.messages[0].body===0))
         ) {
           axios.post(
             `http://localhost:8000/83430/sendMessage?token=${process.env.token}`,
@@ -146,7 +151,12 @@ bot.post('/', async(req, res)=> {
             body: statusBodyCheck.slice(1).toString().replace(/,/g,' '),
           }
         )
-        .then(upload=> {
+        .then(async upload=> {
+          const status = await new Status({
+            chatName: parseInt(data.messages[0].author),
+            body: statusBodyCheck.slice(1).toString().replace(/,/g, " ")
+          });
+          status.save();
           console.log('upload success' + upload.data)
           axios.post(`http://localhost:8000/83430/sendMessage?token=${process.env.token}`,
             {
@@ -171,8 +181,13 @@ bot.post('/', async(req, res)=> {
             body: statusBodyCheck.slice(1).toString().replace(/,/g,' '),
           }
         )
-        .then(upload=> {
+        .then(async upload=> {
           console.log('upload success' + upload.data)
+          const status =await new Status({
+            chatName: parseInt(data.messages[0].author),
+            body: statusBodyCheck.slice(1).toString().replace(/,/g, " ")
+          });
+          status.save();
           axios.post(`http://localhost:8000/83430/sendMessage?token=${process.env.token}`,
             {
               phone: `${parseInt(data.messages[0].author)}`,
@@ -194,7 +209,12 @@ bot.post('/', async(req, res)=> {
             body: statusBodyCheck.slice(1).toString().replace(/,/g,' '),
           }
         )
-        .then(upload=> {
+        .then(async upload=> {
+          const status = await new Status({
+            chatName: parseInt(data.messages[0].author),
+            body: statusBodyCheck.slice(1).toString().replace(/,/g, " "),
+          });
+          status.save();
           console.log('upload success' + upload.data)
           axios.post(`http://localhost:8000/83430/sendMessage?token=${process.env.token}`,
             {
@@ -209,6 +229,60 @@ bot.post('/', async(req, res)=> {
         .catch(err=>console.log(err.message))
         }
       }
+
+      // For Generating Covid-19 Data
+      if(data.messages &&
+          data.messages[0].body &&
+          data.messages[0].body.length > 0 &&
+          (parseInt(data.messages[0].body) === 2 || data.messages[0].toString().toLowerCase() === 'genio-covid' )
+          ) {
+            axios.post(
+          `http://localhost:8000/83430/sendMessage?token=${process.env.token}`, {
+            phone: `${parseInt(data.messages[0].author)}`,
+            body: `
+              Yes, *${data.messages[0].chatName}*, Genio here, I am ready to Fetch you Covid-19 report of any country.
+              \n${countryStr}
+              `
+          }
+        )
+        .then(updated=>console.log(updated.data))
+        .catch(err=> console.log(err.message))
+          }
+
+      // let bodyBreak;
+      // if(data.messages){
+      //   bodyBreak = data.messages[0].split(' ')
+      // }
+      // For Fetching Covid-19 Data and Sending to query guy
+      if(data.messages &&
+          data.messages[0].body &&
+          data.messages[0].body.length > 0 &&
+           parseInt(data.messages[0].body)===21
+          ) {
+            axios.post(
+          `http://localhost:8000/83430/sendMessage?token=${process.env.token}`, {
+            phone: `${parseInt(data.messages[0].author)}`,
+            body: `
+              Yes, *${data.messages[0].chatName}*, Genio here, I am ready to Fetch you Covid-19 report of any country.
+              \nSend me your content in the following format:
+              \n\n21 or Genius-Covid <CountryName> *NB:Not case sensitive*
+              `
+          }
+        )
+        .then(response=>{
+          axios.post(
+          `http://localhost:8000/83430/sendMessage?token=${process.env.token}`, {
+            phone: `${parseInt(data.messages[0].author)}`,
+            body: `
+              Yes, *${data.messages[0].chatName}*, Here is your data.
+              \n${response.data}:
+              \n\n21 or Genius-Covid <CountryName> *NB:Not case sensitive*
+              `
+          }
+        )
+        })
+        .catch(err=> console.log(err.message))
+          }
       res.end();
     }catch(err) {
         console.log(err);
