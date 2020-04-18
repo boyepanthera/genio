@@ -52,8 +52,8 @@ bot.get('/', (req, res)=> {
 bot.post('/', async(req, res)=> {
     try {
         let data = req.body;
-        console.log(data);
-        let searchKeywords = ['hi' , 'hello', 'hii', 'hy' , 'hey', 'heyy', 'hello', 'xup', 'yo', 'yoh'];
+        // console.log(data);
+        let searchKeywords = ['hi' ,'hai', 'hello', 'hii', 'hy' , 'hey', 'heyy','hayi', 'hayy', 'ay', 'hello', 'xup', 'yo', 'yoh'];
         let greetings = ['Hello', 'My Buddy', 'Hey', 'Wonderful', 'The great', 'My Person', 'Hi', 'Hii', 'Heyy'];
         let closeGreetings = ['Wetin dey?', 'How far?', 'Xup?', 'How are you doing?'];
         let random = Math.floor(Math.random() * greetings.length);
@@ -86,30 +86,42 @@ bot.post('/', async(req, res)=> {
           );
         }
       let modeKeywords = ['genio-status', 'genio-util', 'genio-covid19', 'genio-share'];
-      let modeCheck = data.messages.body.toLowerCase().split(' ');
+      let modeCheck;
+       if (data.messages) {
+         modeCheck = data.messages[0].body.toLowerCase().split(" ");
+       }
+
+      let statusBodyCheck;
+       if (data.messages) {
+         statusBodyCheck = data.messages[0].body.split(" ");
+       }
+
+      let statusSecondBodyCheck;
+       if (data.messages) {
+         statusSecondBodyCheck = data.messages[0].body.split("\n");
+       }
 
       // Response for Genio Status Mode
       if (
           data.messages &&
           data.messages[0].body &&
           data.messages[0].body.length > 0 &&
-          modeKeywords.includes(modeCheck[0]) && 
           (modeCheck[0] ==='genio-status' || parseInt(modeCheck[0])===1)
       ) {
         axios.post(
           `http://localhost:8000/83430/sendMessage?token=${process.env.token}`, {
             phone: `${parseInt(data.messages[0].author)}`,
             body: `
-              I am ready to execute your Status update task.
-              \nsend me your content in the following format:
-              \n\n11
-
+              Yes, *${data.messages[0].chatName}*, Genio here, I am ready to execute your Status update task.
+              \nSend me your content in the following format:
+              \n\n11 or Genius-Status-Body *NB:Not case sensitive*
               \nYour content...
-              \n\nYour Name
+              \n\nYour Name  *NB:This is optional*
               `
           }
-        );
-
+        )
+        .then(updated=>console.log(updated.data))
+        .catch(err=> console.log(err.message))
       }
 
       // Response for After Getting and Uploading status content
@@ -117,16 +129,49 @@ bot.post('/', async(req, res)=> {
           data.messages &&
           data.messages[0].body &&
           data.messages[0].body.length > 0 &&
-          (modeCheck[0] ==='genio-status-body' || parseInt(modeCheck[0])===11)
+          (statusBodyCheck[0].toLowerCase() ==='genio-status-body'||statusBodyCheck[0].substring(0, 17).toLowerCase()==='genio-status-body' || parseInt(statusBodyCheck[0])===11)
       ) {
-        axios.post(
-          `http://localhost:8000/83430/setMyStatus?token=${process.env.token}`,
+        // console.log(data.messages[0].body);
+        console.log(statusBodyCheck)
+        if (statusBodyCheck[0].toLowerCase() !=='genio-status-body' && statusBodyCheck[0].length>2 && statusBodyCheck[0].substring(0, 17).toLowerCase()!=='genio-status-body' ){
+          // statusBodyCheck[0] = statusBodyCheck[0].replace('\n', ' ');
+          let shadowBody = statusBodyCheck[0].replace('\n', ' ').split(' ');
+          statusBodyCheck[0] = shadowBody[1];
+          statusBodyCheck.unshift(shadowBody[0]);
+          console.log(statusBodyCheck)
+          axios.post(
+          `http://localhost:8000/83430/uploadStatus?token=${process.env.token}`,
           {
-            newStatus: data.messages[0].body,
+            body: statusBodyCheck.slice(1).toString().replace(/,/g,' '),
           }
         )
-        .then(upload=> console.log(upload))
-        .catch(err=>console.log(err))
+        .then(upload=> console.log(upload.data))
+        .catch(err=>console.log(err.message))
+        } 
+        else if (statusBodyCheck[0].toLowerCase() !=='genio-status-body' && statusBodyCheck[0].substring(0, 17).toLowerCase()==='genio-status-body'){
+          statusBodyCheck[0] = statusBodyCheck[0].substring(17);
+          statusBodyCheck.unshift(statusBodyCheck[0].substring(0,17));
+          console.log(statusBodyCheck)
+          axios.post(
+          `http://localhost:8000/83430/uploadStatus?token=${process.env.token}`,
+          {
+            body: statusBodyCheck.slice(1).toString().replace(/,/g,' '),
+          }
+        )
+        .then(upload=> console.log(upload.data))
+        .catch(err=>console.log(err.message))
+        } 
+        else {
+         statusBodyCheck[1] = statusBodyCheck[1].replace('\n','')
+          axios.post(
+          `http://localhost:8000/83430/uploadStatus?token=${process.env.token}`,
+          {
+            body: statusBodyCheck.slice(1).toString().replace(/,/g,' '),
+          }
+        )
+        .then(upload=> console.log(upload.data))
+        .catch(err=>console.log(err.message))
+        }
       }
       res.end();
     }catch(err) {

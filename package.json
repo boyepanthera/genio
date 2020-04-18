@@ -11,6 +11,7 @@
   "license": "MIT",
   "private": false,
   "dependencies": {
+    "@open-wa/wa-automate": "^1.8.63",
     "axios": "^0.19.2",
     "cross-env": "^7.0.2",
     "dotenv": "^8.2.0",
