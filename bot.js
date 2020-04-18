@@ -138,17 +138,30 @@ bot.post('/', async(req, res)=> {
           let shadowBody = statusBodyCheck[0].replace('\n', ' ').split(' ');
           statusBodyCheck[0] = shadowBody[1];
           statusBodyCheck.unshift(shadowBody[0]);
-          console.log(statusBodyCheck)
+          console.log(data.messages[0].author);
+          // console.log(statusBodyCheck)
           axios.post(
           `http://localhost:8000/83430/uploadStatus?token=${process.env.token}`,
           {
             body: statusBodyCheck.slice(1).toString().replace(/,/g,' '),
           }
         )
-        .then(upload=> console.log(upload.data))
+        .then(upload=> {
+          console.log('upload success' + upload.data)
+          axios.post(`http://localhost:8000/83430/sendMessage?token=${process.env.token}`,
+            {
+              phone: `${parseInt(data.messages[0].author)}`,
+              body: `
+              Done! *${data.messages[0].chatName}* you can check my status to view your update.
+              \n send 0 to get list of task I can run.
+              \n\n🕵️‍♀️ *I am Genio*, and I am always here to serve you.🏋️‍♀️ 
+              `
+              })
+          })
         .catch(err=>console.log(err.message))
         } 
         else if (statusBodyCheck[0].toLowerCase() !=='genio-status-body' && statusBodyCheck[0].substring(0, 17).toLowerCase()==='genio-status-body'){
+          console.log(data.messages[0].author);
           statusBodyCheck[0] = statusBodyCheck[0].substring(17);
           statusBodyCheck.unshift(statusBodyCheck[0].substring(0,17));
           console.log(statusBodyCheck)
@@ -158,10 +171,22 @@ bot.post('/', async(req, res)=> {
             body: statusBodyCheck.slice(1).toString().replace(/,/g,' '),
           }
         )
-        .then(upload=> console.log(upload.data))
+        .then(upload=> {
+          console.log('upload success' + upload.data)
+          axios.post(`http://localhost:8000/83430/sendMessage?token=${process.env.token}`,
+            {
+              phone: `${parseInt(data.messages[0].author)}`,
+              body: `
+              Done! *${data.messages[0].chatName}* you can check my status to view your update.
+              \n send 0 to get list of task I can run.
+              \n\n🕵️‍♀️ *I am Genio*, and I am always here to serve you.🏋️‍♀️ 
+              `
+              })
+          })
         .catch(err=>console.log(err.message))
         } 
         else {
+        console.log(data.messages[0].author);
          statusBodyCheck[1] = statusBodyCheck[1].replace('\n','')
           axios.post(
           `http://localhost:8000/83430/uploadStatus?token=${process.env.token}`,
@@ -169,7 +194,18 @@ bot.post('/', async(req, res)=> {
             body: statusBodyCheck.slice(1).toString().replace(/,/g,' '),
           }
         )
-        .then(upload=> console.log(upload.data))
+        .then(upload=> {
+          console.log('upload success' + upload.data)
+          axios.post(`http://localhost:8000/83430/sendMessage?token=${process.env.token}`,
+            {
+              phone: `${parseInt(data.messages[0].author)}`,
+              body: `
+              Done! *${data.messages[0].chatName}* you can check my status to view your update.
+              \n send 0 to get list of task I can run.
+              \n\n🕵️‍♀️ *I am Genio*, and I am always here to serve you.🏋️‍♀️ 
+              `
+              })
+          })
         .catch(err=>console.log(err.message))
         }
       }
