@@ -2,6 +2,7 @@ import express from 'express';
 const bot = express();
 import dotenv from 'dotenv';
 dotenv.config();
+import cloudinary from 'cloudinary';
 import morgan from 'morgan';
 import fs from 'fs';
 import path from 'path';
@@ -10,9 +11,14 @@ import mongoose from 'mongoose';
 import Status from './models/Status';
 import {Rounder} from './injections';
 import countries from './countries';
+import PDF from './models/pdfText';
 let countryStr ='';
 countries.forEach((country, i)=> countryStr+= `${i+1}. ${country}\n`);
 var State = 0
+let pdf = new PDF({data: ''});
+import PDFDocument from 'pdfkit';
+let doc =  new PDFDocument();
+doc.pipe(fs.createWriteStream(__dirname + "/output.pdf"));
 
 const writeWebinar = fs.createWriteStream(
   path.join(__dirname, "/webinar.txt"),
@@ -21,6 +27,12 @@ const writeWebinar = fs.createWriteStream(
     encoding: "utf8",
   }
 );
+
+cloudinary.config({
+  cloud_name: process.env.cloudName,
+  api_key: process.env.cloudKey,
+  api_secret: process.env.cloudSecret,
+});
 
 mongoose.connect("mongodb://localhost/genio", {
   useNewUrlParser: true,
@@ -402,6 +414,7 @@ bot.post('/', async(req, res)=> {
               .catch((err) => console.log(err.message));
           }
 
+
           // Response for Group share mode (3)
           if (
             data.messages &&
@@ -449,11 +462,9 @@ bot.post('/', async(req, res)=> {
               }
             ).then(sendGroup => {
               State =3
+              pdf.data = ''
             })
           }
-
-          var pdfString = ['Hey I a dummy'];
-
           if (
             data.messages &&
             data.messages[0].body &&
@@ -462,34 +473,51 @@ bot.post('/', async(req, res)=> {
             State === 3 
           ) {
             if (parseInt(data.messages[0].body) !==4) {
-              writeWebinar.write(data.messages[0].body);
-            }
-          
+              pdf.data += data.messages[0].body + '\n'
+              doc.text(pdf.data, 100, 100);
+            }       
+
           if (
             data.messages &&
             data.messages[0].body &&
             data.messages[0].author.length > 19 &&
             data.messages[0].body.length > 0 &&
-            State === 3 &&
             parseInt(data.messages[0].body) === 4
           ) {
-            console.log(fs.createReadStream(__dirname + '/webinar.txt'))
-            axios.post(
-              `http://localhost:8000/83430/sendMessage?token=${process.env.token}`,
-              {
-                chatId: `${data.messages[0].author}`,
-                body: pdfString[0],
+            doc.end()
+            cloudinary.v2.uploader.upload(__dirname+'/output.pdf' , (err, uploads)=> {
+              if(err){
+                console.log(err)
+              } else {
+                axios
+                  .post(`http://localhost:8000/83430/sendFile?token=${process.env.token}`, {
+                    chatId: `${data.messages[0].author}`,
+                    body: uploads.secure_url,
+                    filename: `${parseInt(data.messages[0].author)}+${Date.now()}.pdf`,
+                    caption: `Here is the file you requested`,
+                  })
+                  .then((upd) =>{
+                    State = 0
+                    console.log(upd.data)
+                  })
+                  .catch((err) => console.log(err));
               }
-            );
+            })
+            
+          }
+
+           if (
+            data.messages &&
+            data.messages[0].body &&
+            data.messages[0].author.length > 19 &&
+            data.messages[0].body.length > 0 &&
+            data.messages[0].body === 'genio-fetch-as-pdf'
+          ){
+            axios.post()
+            
           }
           }
-
-
-
-
-
-
-            res.end();
+          res.end();
         }catch(err) {
         console.log(err);
         res.end();
