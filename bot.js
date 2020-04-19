@@ -456,8 +456,9 @@ bot.post('/', async(req, res)=> {
               {
                 chatId: `${data.messages[0].author}`,
                 body: `
-                    Yes, *${data.messages[0].chatName}*, Genio here, I am ready to help you share contents across whatsapp groups.
-                    \nYou don't need to move your groups to Telegram again.
+                    Yes, *${data.messages[0].chatName}*, Genio here, I am ready to help you stream your content into pdf
+                    \n And also share your contents across whatsapp groups.
+                    \nYou don't need to move your groups to Telegram again or copy and paste your whatsapp webinar content manually.
                     \n\n🕵️‍♀️ *I am Genio*, and I am always here to serve you.🏋️‍♀️`,
               }
             ).then(sendGroup => {
