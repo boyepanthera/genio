@@ -8,9 +8,11 @@ import path from 'path';
 import axios from 'axios';
 import mongoose from 'mongoose';
 import Status from './models/Status';
+import {Rounder} from './injections';
 import countries from './countries';
 let countryStr ='';
-countries.forEach((country, i)=> countryStr+= `${i+1}. ${country}\n`)
+countries.forEach((country, i)=> countryStr+= `${i+1}. ${country}\n`);
+var State = 0
 
 mongoose.connect("mongodb://localhost/genio", {
   useNewUrlParser: true,
@@ -71,7 +73,7 @@ bot.post('/', async(req, res)=> {
         if (
           data.messages &&
           data.messages[0].body && data.messages[0].body.length > 0 &&
-          (searchKeywords.includes(starter[0]) || parseInt(data.messages[0].body===0))
+          (searchKeywords.includes(starter[0]) || parseInt(data.messages[0].body)===0)
         ) {
           axios.post(
             `http://localhost:8000/83430/sendMessage?token=${process.env.token}`,
@@ -87,7 +89,7 @@ bot.post('/', async(req, res)=> {
             \nYou can send the text or the number to enter the mode of operation you want.
             \n\n🕵️‍♀️ *I am Genio*, and I am here to serve you.🏋️‍♀️\n`,
             }
-          );
+          )
         }
       let modeKeywords = ['genio-status', 'genio-util', 'genio-covid19', 'genio-share'];
       let modeCheck;
@@ -124,15 +126,19 @@ bot.post('/', async(req, res)=> {
               `
           }
         )
-        .then(updated=>console.log(updated.data))
-        .catch(err=> console.log(err.message))
+        .then(updated=>{
+          State=1
+          console.log(updated.data)
+        })
+        .catch(err=> console
+          .log(err.message))
       }
 
       // Response for After Getting and Uploading status content
       if (
           data.messages &&
           data.messages[0].body &&
-          data.messages[0].body.length > 0 &&
+          data.messages[0].body.length > 0 && State ===1 &&
           (statusBodyCheck[0].toLowerCase() ==='genio-status-body'||statusBodyCheck[0].substring(0, 17).toLowerCase()==='genio-status-body' || parseInt(statusBodyCheck[0])===11)
       ) {
         // console.log(data.messages[0].body);
@@ -169,7 +175,9 @@ bot.post('/', async(req, res)=> {
           })
         .catch(err=>console.log(err.message))
         } 
-        else if (statusBodyCheck[0].toLowerCase() !=='genio-status-body' && statusBodyCheck[0].substring(0, 17).toLowerCase()==='genio-status-body'){
+        else if (statusBodyCheck[0].toLowerCase() !=='genio-status-body' && State ===1&&
+         statusBodyCheck[0].substring(0, 17).toLowerCase()==='genio-status-body'
+         ){
           console.log(data.messages[0].author);
           statusBodyCheck[0] = statusBodyCheck[0].substring(17);
           statusBodyCheck.unshift(statusBodyCheck[0].substring(0,17));
@@ -245,7 +253,7 @@ bot.post('/', async(req, res)=> {
           }
         )
         .then(updated=>{
-          let
+          State = 2
         })
         .catch(err=> console.log(err.message))
           }
@@ -258,31 +266,38 @@ bot.post('/', async(req, res)=> {
       if(data.messages &&
           data.messages[0].body &&
           data.messages[0].body.length > 0 &&
-           parseInt(data.messages[0].body)===21
+          State === 2 && parseInt(data.messages[0].body) >0
           ) {
-            axios.post(
-          `http://localhost:8000/83430/sendMessage?token=${process.env.token}`, {
-            phone: `${parseInt(data.messages[0].author)}`,
-            body: `
-              Yes, *${data.messages[0].chatName}*, Genio here, I am ready to Fetch you Covid-19 report of any country.
-              \nSend me your content in the following format:
-              \n\n21 or Genius-Covid <CountryName> *NB:Not case sensitive*
-              `
-          }
-        )
-        .then(response=>{
-          axios.post(
-          `http://localhost:8000/83430/sendMessage?token=${process.env.token}`, {
-            phone: `${parseInt(data.messages[0].author)}`,
-            body: `
-              Yes, *${data.messages[0].chatName}*, Here is your data.
-              \n${response.data}:
-              \n\n21 or Genius-Covid <CountryName> *NB:Not case sensitive*
-              `
-          }
-        )
-        })
-        .catch(err=> console.log(err.message))
+            axios
+              .get(
+                `https://corona.lmao.ninja/v2/countries/${
+                  countries[parseInt(data.messages[0].body)-1]
+                }`
+              )
+              .then((response) => {
+                let sentMessage= response.data;
+                axios.post(
+                  `http://localhost:8000/83430/sendMessage?token=${process.env.token}`,
+                  {
+                    phone: `${parseInt(data.messages[0].author)}`,
+                    body: `
+                        Yes, *${data.messages[0].chatName}*, Here is your data.
+                        \n*Here is the latest COVID-19 report for ${sentMessage.country}:*
+                        \nCases Today: ${sentMessage.todayCases}
+                        \nTotal Cases : ${sentMessage.cases}
+                        \nTotal Recovered : ${sentMessage.recovered}
+                        \nRecovery Rate: ${Rounder((sentMessage.recovered * 100) / sentMessage.cases,2)}%
+                        \nActive : ${sentMessage.active}
+                        \nTotal Deaths : ${sentMessage.deaths}
+                        \nCritical : ${sentMessage.critical}
+                        \nPlease stay home & stay safe. 
+                        \n*Huge 💝 from Genio*.
+                        \n\nSend 0 to get list of tasks I can do for you.
+              `,
+                  }
+                );
+              })
+              .catch((err) => console.log(err.message));
           }
       res.end();
     }catch(err) {
