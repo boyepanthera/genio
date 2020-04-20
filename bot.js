@@ -15,10 +15,11 @@ import PDF from './models/pdfText';
 let countryStr ='';
 countries.forEach((country, i)=> countryStr+= `${i+1}. ${country}\n`);
 var State = 0
-let pdf = new PDF({data: ''});
+var baseGroup;
+var secondGroup;
+var requester;
 import PDFDocument from 'pdfkit';
-let doc =  new PDFDocument();
-doc.pipe(fs.createWriteStream(__dirname + "/output.pdf"));
+var pdf; var doc; var fileName;
 
 const writeWebinar = fs.createWriteStream(
   path.join(__dirname, "/webinar.txt"),
@@ -115,7 +116,7 @@ bot.post('/', async(req, res)=> {
           let random = Math.floor(Math.random() * greetings.length);
           let closeRandom = Math.floor(Math.random() * closeGreetings.length);
           let starter;
-          if (data.messages) {
+          if (data.messages&&data.messages[0].body) {
             starter = data.messages[0].body.toLowerCase().split(" ");
           }
 
@@ -153,17 +154,17 @@ bot.post('/', async(req, res)=> {
             "genio-share",
           ];
           let modeCheck;
-          if (data.messages) {
+          if (data.messages && data.messages[0].body) {
             modeCheck = data.messages[0].body.toLowerCase().split(" ");
           }
 
           let statusBodyCheck;
-          if (data.messages) {
+          if (data.messages && data.messages[0].body) {
             statusBodyCheck = data.messages[0].body.split(" ");
           }
 
           let statusSecondBodyCheck;
-          if (data.messages) {
+          if (data.messages && data.messages[0].body) {
             statusSecondBodyCheck = data.messages[0].body.split("\n");
           }
 
@@ -344,7 +345,7 @@ bot.post('/', async(req, res)=> {
             data.messages[0].author.length < 19 &&
             State !== 2 &&
             (parseInt(data.messages[0].body) === 2 ||
-              data.messages[0].toString().toLowerCase() === "genio-covid")
+              data.messages[0].body.toLowerCase() === "genio-covid")
           ) {
             axios
               .post(
@@ -393,8 +394,10 @@ bot.post('/', async(req, res)=> {
                         \n*Here is the latest COVID-19 report for ${
                           sentMessage.country
                         }:*
+                        \nTotal Tested: ${sentMessage.tests}
                         \nCases Today: ${sentMessage.todayCases}
                         \nTotal Cases : ${sentMessage.cases}
+                        \nTest-to-Case : ${Rounder(sentMessage.cases*100/sentMessage.tests, 2)}%
                         \nTotal Recovered : ${sentMessage.recovered}
                         \nRecovery Rate: ${Rounder(
                           (sentMessage.recovered * 100) / sentMessage.cases,
@@ -415,7 +418,7 @@ bot.post('/', async(req, res)=> {
           }
 
 
-          // Response for Group share mode (3)
+          // Response for Group share mode (3), when called privately
           if (
             data.messages &&
             data.messages[0].body &&
@@ -430,14 +433,14 @@ bot.post('/', async(req, res)=> {
                 {
                   phone: `${parseInt(data.messages[0].author)}`,
                   body: `
-                    Yes, *${data.messages[0].chatName}*, Genio here, I am ready to help you share contents across whatsapp groups.
-                    \nYou don't need to move your groups to Telegram again.
-                    \nAdd me to the two whatsapp groups
+                    Yes, *${data.messages[0].chatName}*, Genio here, I am ready to help you stream your chat into a pdf file.
+                    \nAdd me to the group and send 3 to start the streaming
+                    \nSend 4 to me in the group to get your file as a DM
                     \n\n🕵️‍♀️ *I am Genio*, and I am always here to serve you.🏋️‍♀️`,
                 }
               )
               .then((updated) => {
-                State = 3;
+                State = 0;
               })
               .catch((err) => console.log(err.message));
           }
@@ -451,14 +454,20 @@ bot.post('/', async(req, res)=> {
             State !== 3 &&
             parseInt(data.messages[0].body) === 3
           ) {
+            pdf = new PDF({ data: "" });
+            doc = new PDFDocument();
+            fileName = __dirname + "/files/" + Date.now() + "output.pdf";
+            doc.pipe(fs.createWriteStream(fileName));
+            requester = data.messages[0].author;
+            baseGroup = data.messages[0].author;
+            console.log(baseGroup, requester, requester.substring(0,13));
             axios.post(
               `http://localhost:8000/83430/sendMessage?token=${process.env.token}`,
               {
                 chatId: `${data.messages[0].author}`,
                 body: `
-                    Yes, *${data.messages[0].chatName}*, Genio here, I am ready to help you stream your content into pdf
-                    \n And also share your contents across whatsapp groups.
-                    \nYou don't need to move your groups to Telegram again or copy and paste your whatsapp webinar content manually.
+                    Yes, *${data.messages[0].chatName}*.
+                    \n Roger that
                     \n\n🕵️‍♀️ *I am Genio*, and I am always here to serve you.🏋️‍♀️`,
               }
             ).then(sendGroup => {
@@ -469,12 +478,18 @@ bot.post('/', async(req, res)=> {
           if (
             data.messages &&
             data.messages[0].body &&
+            data.messages[0].author === baseGroup&&
             data.messages[0].author.length > 19 &&
             data.messages[0].body.length > 0 &&
             State === 3 
           ) {
+            console.log(data.messages[0].author, baseGroup, requester, State);
             if (parseInt(data.messages[0].body) !==4) {
-              pdf.data += data.messages[0].body + '\n'
+              pdf.data +=
+                data.messages[0].chatName +
+                ": " +
+                data.messages[0].body +"\n" +new Date +
+                "\n\n";
               doc.text(pdf.data, 100, 100);
             }       
 
@@ -483,40 +498,56 @@ bot.post('/', async(req, res)=> {
             data.messages[0].body &&
             data.messages[0].author.length > 19 &&
             data.messages[0].body.length > 0 &&
+            data.messages[0].author === baseGroup &&
             parseInt(data.messages[0].body) === 4
           ) {
-            doc.end()
-            cloudinary.v2.uploader.upload(__dirname+'/output.pdf' , (err, uploads)=> {
-              if(err){
-                console.log(err)
+            console.log(data.messages[0].author, baseGroup)
+            doc.end();
+            cloudinary.v2.uploader.upload(fileName, (err, uploads) => {
+              if (err) {
+                console.log(err);
               } else {
                 axios
-                  .post(`http://localhost:8000/83430/sendFile?token=${process.env.token}`, {
-                    chatId: `${data.messages[0].author}`,
-                    body: uploads.secure_url,
-                    filename: `${parseInt(data.messages[0].author)}+${Date.now()}.pdf`,
-                    caption: `Here is the file you requested`,
-                  })
-                  .then((upd) =>{
-                    State = 0
-                    console.log(upd.data)
+                  .post(
+                    `http://localhost:8000/83430/sendFile?token=${process.env.token}`,
+                    {
+                      phone:data.messages[0].author.substring(0,13),
+                      body: uploads.secure_url,
+                      filename: `${parseInt(
+                        data.messages[0].author
+                      )}+${Date.now()}.pdf`,
+                      caption: `Here is the file you requested`,
+                    }
+                  )
+                  .then((upd) => {
+                    State = 0;
+                    console.log(upd.data);
                   })
                   .catch((err) => console.log(err));
               }
-            })
-            
+            });
+          }
           }
 
-           if (
+          if (
             data.messages &&
             data.messages[0].body &&
-            data.messages[0].author.length > 19 &&
-            data.messages[0].body.length > 0 &&
-            data.messages[0].body === 'genio-fetch-as-pdf'
-          ){
-            axios.post()
-            
-          }
+            data.messages[0].author.length < 19 &&
+            State !== 5 &&
+            parseInt(data.messages[0].body) === 5 &&
+            data.messages[0].body.length > 0
+          ) {
+            axios
+              .post(
+                `http://localhost:8000/83430/sendMessage?token=${process.env.token}`,
+                {
+                  chatId: data.messages[0].author,
+                  body: `Yes, *${data.messages[0].chatName}*, Genio here, I am ready to save you to my contact
+                    \n Send me your name so I can add you to my contact.
+                    \n\n🕵️‍♀️ *I am Genio*, and I am always here to serve you.🏋️‍♀️`,
+                }
+              )
+              .then((reqforName) => (State = 5));
           }
           res.end();
         }catch(err) {
