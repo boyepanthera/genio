@@ -16,6 +16,7 @@ let countryStr ='';
 countries.forEach((country, i)=> countryStr+= `${i+1}. ${country}\n`);
 var State = 0
 var baseGroup;
+var firstGroup;
 var secondGroup;
 var requester;
 import PDFDocument from 'pdfkit';
@@ -116,6 +117,7 @@ bot.post('/', async(req, res)=> {
           let random = Math.floor(Math.random() * greetings.length);
           let closeRandom = Math.floor(Math.random() * closeGreetings.length);
           let starter;
+          
           if (data.messages&&data.messages[0].body) {
             starter = data.messages[0].body.toLowerCase().split(" ");
           }
@@ -172,6 +174,7 @@ bot.post('/', async(req, res)=> {
           if (
             data.messages &&
             data.messages[0].body &&
+            data.messages[0].author.length < 19 &&
             data.messages[0].body.length > 0 &&
             (modeCheck[0] === "genio-status" || parseInt(modeCheck[0]) === 1)
           ) {
@@ -201,6 +204,7 @@ bot.post('/', async(req, res)=> {
             data.messages &&
             data.messages[0].body &&
             data.messages[0].body.length > 0 &&
+            data.messages[0].author.length < 19 &&
             State === 1 &&
             (statusBodyCheck[0].toLowerCase() === "genio-status-body" ||
               statusBodyCheck[0].substring(0, 17).toLowerCase() ===
@@ -373,6 +377,7 @@ bot.post('/', async(req, res)=> {
           if (
             data.messages &&
             data.messages[0].body &&
+            data.messages[0].author.length < 19 &&
             data.messages[0].body.length > 0 &&
             State === 2 &&
             parseInt(data.messages[0].body) > 0
@@ -397,7 +402,10 @@ bot.post('/', async(req, res)=> {
                         \nTotal Tested: ${sentMessage.tests}
                         \nCases Today: ${sentMessage.todayCases}
                         \nTotal Cases : ${sentMessage.cases}
-                        \nTest-to-Case : ${Rounder(sentMessage.cases*100/sentMessage.tests, 2)}%
+                        \nTest-to-Case : ${Rounder(
+                          (sentMessage.cases * 100) / sentMessage.tests,
+                          2
+                        )}%
                         \nTotal Recovered : ${sentMessage.recovered}
                         \nRecovery Rate: ${Rounder(
                           (sentMessage.recovered * 100) / sentMessage.cases,
@@ -483,7 +491,6 @@ bot.post('/', async(req, res)=> {
             data.messages[0].body.length > 0 &&
             State === 3 
           ) {
-            console.log(data.messages[0].author, baseGroup, requester, State);
             if (parseInt(data.messages[0].body) !==4) {
               pdf.data +=
                 data.messages[0].chatName +
@@ -511,17 +518,18 @@ bot.post('/', async(req, res)=> {
                   .post(
                     `http://localhost:8000/83430/sendFile?token=${process.env.token}`,
                     {
-                      phone:data.messages[0].author.substring(0,13),
+                      phone: data.messages[0].author.substring(0, 13),
                       body: uploads.secure_url,
                       filename: `${parseInt(
                         data.messages[0].author
                       )}+${Date.now()}.pdf`,
-                      caption: `Here is the file you requested`,
+                      caption: `Here is the file ${data.messages[0].chatName} requested`,
                     }
                   )
                   .then((upd) => {
                     State = 0;
                     console.log(upd.data);
+                    fs.unlink(fileName);
                   })
                   .catch((err) => console.log(err));
               }
@@ -529,25 +537,89 @@ bot.post('/', async(req, res)=> {
           }
           }
 
+          // For placing bot on sharing mode
           if (
             data.messages &&
             data.messages[0].body &&
-            data.messages[0].author.length < 19 &&
+            data.messages[0].author.length > 19 &&
             State !== 5 &&
-            parseInt(data.messages[0].body) === 5 &&
+            data.messages[0].body.substring(0,13) === '5-genio-share' &&
+            data.messages[0].body.length > 0
+          ) {
+            firstGroup = data.messages[0].author;
+            axios
+              .post(
+                `http://localhost:8000/83430/sendMessage?token=${process.env.token}`,
+                {
+                  chatId: data.messages[0].author,
+                  body: `Yes, *${data.messages[0].chatName}*, Genio here, I am ready to send your messages
+                    \n To another group send me code genio-copy in the other group.
+                    \n\n🕵️‍♀️ *I am Genio*, and I am always here to serve you.🏋️‍♀️`,
+                }
+              )
+              .then((reqforName) => (State = 5));
+          }
+
+          // For informing boss of copied group
+          if (
+            data.messages &&
+            data.messages[0].body &&
+            data.messages[0].author.length > 19 &&
+            State === 5 &&
+            data.messages[0].body.substring(0, 10) === "genio-copy" &&
+            data.messages[0].body.length > 0
+          ) {
+            secondGroup = data.messages[0].author;
+            console.log(secondGroup, firstGroup);
+            axios
+              .post(
+                `http://localhost:8000/83430/sendMessage?token=${process.env.token}`,
+                {
+                  chatId: data.messages[0].author,
+                  body: `Yes, *${data.messages[0].chatName}*, Genio here, I am ready to send your messages
+                    \n I will be sharing you content from the first group.
+                    \n\n🕵️‍♀️ *I am Genio*, and I am always here to serve you.🏋️‍♀️`,
+                }
+              )
+              .then((reqforName) => console.log(reqforName.data));
+          }
+
+          if (
+            data.messages &&
+            data.messages[0].body &&
+            data.messages[0].author.length > 19 &&
+            data.messages[0].author === firstGroup &&
+            State === 5 &&
             data.messages[0].body.length > 0
           ) {
             axios
               .post(
                 `http://localhost:8000/83430/sendMessage?token=${process.env.token}`,
                 {
-                  chatId: data.messages[0].author,
-                  body: `Yes, *${data.messages[0].chatName}*, Genio here, I am ready to save you to my contact
-                    \n Send me your name so I can add you to my contact.
-                    \n\n🕵️‍♀️ *I am Genio*, and I am always here to serve you.🏋️‍♀️`,
+                  chatId: secondGroup,
+                  body: data.messages[0].chatName + ": " +data.messages[0].body
                 }
               )
               .then((reqforName) => (State = 5));
+          }
+
+          if (
+            data.messages &&
+            data.messages[0].body.substring(0,12).toLowerCase()==='5-genio-stop' &&
+            data.messages[0].author.length > 19 &&
+            data.messages[0].author === firstGroup &&
+            State === 5 &&
+            data.messages[0].body.length > 0
+          ) {
+             axios
+               .post(
+                 `http://localhost:8000/83430/sendMessage?token=${process.env.token}`,
+                 {
+                   chatId: firstGroup,
+                   body: `Noted ${data.messages[0].chatName}, I will stop sharing your content to another group.`,
+                 }
+               )
+               .then((reqforName) => (State = 5));
           }
           res.end();
         }catch(err) {
