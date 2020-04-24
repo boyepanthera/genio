@@ -1,6 +1,7 @@
 import express from 'express';
 const bot = express();
 import dotenv from 'dotenv';
+const  {google} =require('googleapis')
 dotenv.config();
 import cloudinary from 'cloudinary';
 import morgan from 'morgan';
@@ -29,6 +30,21 @@ const writeWebinar = fs.createWriteStream(
     encoding: "utf8",
   }
 );
+
+// const people  = google.people({
+//   version : 'v1',
+//   auth: process.env.peopleKey,
+//   key: process.env.peopleKey
+// });
+
+// people.people.connections.list({
+//     personFields: ["names", "emailAddresses"],
+//     resourceName: "people/me",
+//     pageSize: 10,
+//   }).then(connections=> {
+//     console.log("\n\nUser's Connections:\n");
+//     connections.forEach((c) => console.log(c));
+//   }).catch(err=>console.log(err))
 
 cloudinary.config({
   cloud_name: process.env.cloudName,
@@ -117,8 +133,8 @@ bot.post('/', async(req, res)=> {
           let random = Math.floor(Math.random() * greetings.length);
           let closeRandom = Math.floor(Math.random() * closeGreetings.length);
           let starter;
-          
-          if (data.messages&&data.messages[0].body) {
+
+          if (data.messages && data.messages[0].body) {
             starter = data.messages[0].body.toLowerCase().split(" ");
           }
 
@@ -140,10 +156,11 @@ bot.post('/', async(req, res)=> {
             ${greetings[random]} *${data.messages[0].chatName}* 
             \n${closeGreetings[closeRandom]} 
             \n*I am Genio*, and these are the things for you:
-            \n*1. Genio-Status* \nUsage: You send Genio-Status \nWith this I can help you upload your content to my status, and keep a Record of your shared status. 
-            \n*2. Genio-Covid* \nSend you information about Coronavirus\nSend me: Genio-Covid <CountryName> to get Covid-Data about the country
-            \n*3. Genio-Share* - Share your messages to groups.\nAdd me to two groups and I can help you share messages from one group to the other you don't need a telegram version of your group again.
-            \nYou can send the text or the number to enter the mode of operation you want.
+            \n*1. Genio-Status* \nYou send 1 \nWith this I can send you further instructions to help you upload your content to my status, and keep a Record of your shared status. 
+            \n*2. Genio-Covid* \nSend you information about Coronavirus\nSend me: 2 to get country list.
+            \n*3. Genio-Share* - Share your messages to groups.\nAdd me to two groups and I can help you share messages from one group to the other, and also generate a pdf script of your chat 
+            \nYou don't need a telegram version of your group again.
+            \nSend corresponding number to enter the mode of operation you want.
             \n\n🕵️‍♀️ *I am Genio*, and I am here to serve you.🏋️‍♀️\n`,
                 }
               )
@@ -425,14 +442,13 @@ bot.post('/', async(req, res)=> {
               .catch((err) => console.log(err.message));
           }
 
-
           // Response for Group share mode (3), when called privately
           if (
             data.messages &&
             data.messages[0].body &&
             data.messages[0].author.length < 19 &&
             data.messages[0].body.length > 0 &&
-            State !== 3 &&
+            State !== 5 &&
             parseInt(data.messages[0].body) === 3
           ) {
             axios
@@ -442,8 +458,12 @@ bot.post('/', async(req, res)=> {
                   phone: `${parseInt(data.messages[0].author)}`,
                   body: `
                     Yes, *${data.messages[0].chatName}*, Genio here, I am ready to help you stream your chat into a pdf file.
-                    \nAdd me to the group and send 3 to start the streaming
-                    \nSend 4 to me in the group to get your file as a DM
+                    \nAnd also share your chat across groups
+                    \nAdd me to group one and send 5-genio-share
+                    \nAdd me to group two and send 5-genio-copy 
+                    \nSend me 4-genio-stream-start in group one and I will start streaming your chat
+                    \nSend me 4-genio-stream-file I will share the chat stream file to the super admin of group 1 
+                    \nOnce you to this I will be sharing chats across the two groups.
                     \n\n🕵️‍♀️ *I am Genio*, and I am always here to serve you.🏋️‍♀️`,
                 }
               )
@@ -453,97 +473,13 @@ bot.post('/', async(req, res)=> {
               .catch((err) => console.log(err.message));
           }
 
-          // Response for Group share mode (3)
-          if (
-            data.messages &&
-            data.messages[0].body &&
-            data.messages[0].author.length > 19 &&
-            data.messages[0].body.length > 0 &&
-            State !== 3 &&
-            parseInt(data.messages[0].body) === 3
-          ) {
-            pdf = new PDF({ data: "" });
-            doc = new PDFDocument();
-            fileName = __dirname + "/files/" + Date.now() + "output.pdf";
-            doc.pipe(fs.createWriteStream(fileName));
-            requester = data.messages[0].author;
-            baseGroup = data.messages[0].author;
-            console.log(baseGroup, requester, requester.substring(0,13));
-            axios.post(
-              `http://localhost:8000/83430/sendMessage?token=${process.env.token}`,
-              {
-                chatId: `${data.messages[0].author}`,
-                body: `
-                    Yes, *${data.messages[0].chatName}*.
-                    \n Roger that
-                    \n\n🕵️‍♀️ *I am Genio*, and I am always here to serve you.🏋️‍♀️`,
-              }
-            ).then(sendGroup => {
-              State =3
-              pdf.data = ''
-            })
-          }
-          if (
-            data.messages &&
-            data.messages[0].body &&
-            data.messages[0].author === baseGroup&&
-            data.messages[0].author.length > 19 &&
-            data.messages[0].body.length > 0 &&
-            State === 3 
-          ) {
-            if (parseInt(data.messages[0].body) !==4) {
-              pdf.data +=
-                data.messages[0].chatName +
-                ": " +
-                data.messages[0].body +"\n" +new Date +
-                "\n\n";
-              doc.text(pdf.data, 100, 100);
-            }       
-
-          if (
-            data.messages &&
-            data.messages[0].body &&
-            data.messages[0].author.length > 19 &&
-            data.messages[0].body.length > 0 &&
-            data.messages[0].author === baseGroup &&
-            parseInt(data.messages[0].body) === 4
-          ) {
-            console.log(data.messages[0].author, baseGroup)
-            doc.end();
-            cloudinary.v2.uploader.upload(fileName, (err, uploads) => {
-              if (err) {
-                console.log(err);
-              } else {
-                axios
-                  .post(
-                    `http://localhost:8000/83430/sendFile?token=${process.env.token}`,
-                    {
-                      phone: data.messages[0].author.substring(0, 13),
-                      body: uploads.secure_url,
-                      filename: `${parseInt(
-                        data.messages[0].author
-                      )}+${Date.now()}.pdf`,
-                      caption: `Here is the file ${data.messages[0].chatName} requested`,
-                    }
-                  )
-                  .then((upd) => {
-                    State = 0;
-                    console.log(upd.data);
-                    fs.unlink(fileName);
-                  })
-                  .catch((err) => console.log(err));
-              }
-            });
-          }
-          }
-
           // For placing bot on sharing mode
           if (
             data.messages &&
             data.messages[0].body &&
             data.messages[0].author.length > 19 &&
             State !== 5 &&
-            data.messages[0].body.substring(0,13) === '5-genio-share' &&
+            data.messages[0].body.substring(0, 13) === "5-genio-share" &&
             data.messages[0].body.length > 0
           ) {
             firstGroup = data.messages[0].author;
@@ -552,8 +488,8 @@ bot.post('/', async(req, res)=> {
                 `http://localhost:8000/83430/sendMessage?token=${process.env.token}`,
                 {
                   chatId: data.messages[0].author,
-                  body: `Yes, *${data.messages[0].chatName}*, Genio here, I am ready to send your messages
-                    \n To another group send me code genio-copy in the other group.
+                  body: `Yes, *${data.messages[0].chatName}*, Genio here, I am ready to send your messages to another group
+                    \nGo To another group send me code 5-genio-copy in the other group.
                     \n\n🕵️‍♀️ *I am Genio*, and I am always here to serve you.🏋️‍♀️`,
                 }
               )
@@ -566,7 +502,7 @@ bot.post('/', async(req, res)=> {
             data.messages[0].body &&
             data.messages[0].author.length > 19 &&
             State === 5 &&
-            data.messages[0].body.substring(0, 10) === "genio-copy" &&
+            data.messages[0].body.substring(0, 12) === "5-genio-copy" &&
             data.messages[0].body.length > 0
           ) {
             secondGroup = data.messages[0].author;
@@ -576,8 +512,8 @@ bot.post('/', async(req, res)=> {
                 `http://localhost:8000/83430/sendMessage?token=${process.env.token}`,
                 {
                   chatId: data.messages[0].author,
-                  body: `Yes, *${data.messages[0].chatName}*, Genio here, I am ready to send your messages
-                    \n I will be sharing you content from the first group.
+                  body: `Yes, *${data.messages[0].chatName}*, Genio here, 
+                    \n I will be sharing you content from the first group and also sending yours back.
                     \n\n🕵️‍♀️ *I am Genio*, and I am always here to serve you.🏋️‍♀️`,
                 }
               )
@@ -597,7 +533,31 @@ bot.post('/', async(req, res)=> {
                 `http://localhost:8000/83430/sendMessage?token=${process.env.token}`,
                 {
                   chatId: secondGroup,
-                  body: data.messages[0].chatName + ": " +data.messages[0].body
+                  body:
+                    `*${data.messages[0].chatName}*` +
+                    ": " +
+                    data.messages[0].body,
+                }
+              )
+              .then((reqforName) => (State = 5));
+          }
+          if (
+            data.messages &&
+            data.messages[0].body &&
+            data.messages[0].author.length > 19 &&
+            data.messages[0].author === secondGroup &&
+            State === 5 &&
+            data.messages[0].body.length > 0
+          ) {
+            axios
+              .post(
+                `http://localhost:8000/83430/sendMessage?token=${process.env.token}`,
+                {
+                  chatId: firstGroup,
+                  body:
+                    `*${data.messages[0].chatName}*` +
+                    ": " +
+                    data.messages[0].body,
                 }
               )
               .then((reqforName) => (State = 5));
@@ -605,21 +565,113 @@ bot.post('/', async(req, res)=> {
 
           if (
             data.messages &&
-            data.messages[0].body.substring(0,12).toLowerCase()==='5-genio-stop' &&
+            data.messages[0].body.substring(0, 12).toLowerCase() ===
+              "5-genio-stop" &&
             data.messages[0].author.length > 19 &&
             data.messages[0].author === firstGroup &&
             State === 5 &&
             data.messages[0].body.length > 0
           ) {
-             axios
-               .post(
-                 `http://localhost:8000/83430/sendMessage?token=${process.env.token}`,
-                 {
-                   chatId: firstGroup,
-                   body: `Noted ${data.messages[0].chatName}, I will stop sharing your content to another group.`,
-                 }
-               )
-               .then((reqforName) => (State = 5));
+            axios
+              .post(
+                `http://localhost:8000/83430/sendMessage?token=${process.env.token}`,
+                {
+                  chatId: firstGroup,
+                  body: `Noted ${data.messages[0].chatName}, I will stop sharing your content to another group.`,
+                }
+              )
+              .then((reqforName) => (State = 5));
+          }
+
+          // Response for Group share mode (3)
+          if (
+            data.messages &&
+            data.messages[0].body &&
+            data.messages[0].author.length > 19 &&
+            data.messages[0].body.length > 0 &&
+            State === 5 &&
+            data.messages[0].body.substring(0, 21) === "4-genio-stream-start"
+          ) {
+            pdf = new PDF({ data: "" });
+            doc = new PDFDocument();
+            fileName = __dirname + "/files/" + Date.now() + "output.pdf";
+            doc.pipe(fs.createWriteStream(fileName));
+            requester = data.messages[0].author;
+            baseGroup = data.messages[0].author;
+            console.log(baseGroup, requester, requester.substring(0, 13));
+            axios
+              .post(
+                `http://localhost:8000/83430/sendMessage?token=${process.env.token}`,
+                {
+                  chatId: `${data.messages[0].author}`,
+                  body: `
+                    Yes, *${data.messages[0].chatName}*.
+                    \n Roger that
+                    \n\n🕵️‍♀️ *I am Genio*, and I am always here to serve you.🏋️‍♀️`,
+                }
+              )
+              .then((sendGroup) => {
+                // State =3
+                pdf.data = "";
+              });
+          }
+          if (
+            data.messages &&
+            data.messages[0].body &&
+            secondGroup && firstGroup&&
+            (data.messages[0].author === firstGroup ||
+              data.messages[0].author === sencondGroup) &&
+            data.messages[0].author.length > 19 &&
+            data.messages[0].body.length > 0 &&
+            State === 5
+          ) {
+            if (parseInt(data.messages[0].body) !== 4) {
+              pdf.data +=
+                data.messages[0].chatName +
+                ": " +
+                data.messages[0].body +
+                "\n" +
+                new Date() +
+                "\n\n";
+              doc.text(pdf.data, 100, 100);
+            }
+
+            if (
+              data.messages &&
+              data.messages[0].body &&
+              data.messages[0].author.length > 19 &&
+              data.messages[0].body.length > 0 &&
+              data.messages[0].author === firstGroup &&
+              State === 5 &&
+              data.messages[0].body.substring(0, 19) === "4-genio-stream-file"
+            ) {
+              console.log(data.messages[0].author, baseGroup);
+              doc.end();
+              cloudinary.v2.uploader.upload(fileName, (err, uploads) => {
+                if (err) {
+                  console.log(err);
+                } else {
+                  axios
+                    .post(
+                      `http://localhost:8000/83430/sendFile?token=${process.env.token}`,
+                      {
+                        phone: data.messages[0].author.substring(0, 13),
+                        body: uploads.secure_url,
+                        filename: `${parseInt(
+                          data.messages[0].author
+                        )}+${Date.now()}.pdf`,
+                        caption: `Here is the file ${data.messages[0].chatName} requested`,
+                      }
+                    )
+                    .then((upd) => {
+                      // State = 0;
+                      console.log(upd.data);
+                      fs.unlink(fileName);
+                    })
+                    .catch((err) => console.log(err));
+                }
+              });
+            }
           }
           res.end();
         }catch(err) {
