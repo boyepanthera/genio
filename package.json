@@ -5,7 +5,7 @@
   "main": "bot.js",
   "author": "Olanrewaju A. Olaboye",
   "scripts": {
-    "start": "nodemon -r esm bot.js",
+    "start": "node -r esm bot.js",
     "start:dev": "cross-env NODE_ENV=development nodemon -r esm bot.js"
   },
   "license": "MIT",

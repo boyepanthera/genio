@@ -52,7 +52,7 @@ cloudinary.config({
   api_secret: process.env.cloudSecret,
 });
 
-mongoose.connect("mongodb://localhost/genio", {
+mongoose.connect(process.env.DB_URL, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })
@@ -681,8 +681,8 @@ bot.post('/', async(req, res)=> {
 })
 
 process.env.NODE_ENV === "development"
-  ? bot.listen(4000, () =>
-      console.log(`Geniobot working on port ${4000}`)
+  ? bot.listen(3001, () =>
+      console.log(`Geniobot working on port ${3000}`)
     )
   : bot.listen(process.env.PORT, process.env.IP, () =>
       console.log(`Geniobot working on port ${process.env.PORT}`)
