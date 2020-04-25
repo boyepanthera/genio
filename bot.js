@@ -621,7 +621,7 @@ bot.post('/', async(req, res)=> {
             data.messages[0].body &&
             secondGroup && firstGroup&&
             (data.messages[0].author === firstGroup ||
-              data.messages[0].author === sencondGroup) &&
+              data.messages[0].author === secondGroup) &&
             data.messages[0].author.length > 19 &&
             data.messages[0].body.length > 0 &&
             State === 5
@@ -683,7 +683,7 @@ bot.post('/', async(req, res)=> {
 
 process.env.NODE_ENV === "development"
   ? bot.listen(3001, () =>
-      console.log(`Geniobot working on port ${3000}`)
+      console.log(`Geniobot working on port ${3001}`)
     )
   : bot.listen(process.env.PORT, process.env.IP, () =>
       console.log(`Geniobot working on port ${process.env.PORT}`)
