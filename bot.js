@@ -460,10 +460,11 @@ bot.post('/', async(req, res)=> {
                     Yes, *${data.messages[0].chatName}*, Genio here, I am ready to help you stream your chat into a pdf file.
                     \nAnd also share your chat across groups
                     \nAdd me to group one and send 5-genio-share
-                    \nAdd me to group two and send 5-genio-copy 
+                    \nAdd me to group two and send 5-genio-copy
+                    \n*With this I will start sharing your contents across the two groups* 
                     \nSend me 4-genio-stream-start in group one and I will start streaming your chat
                     \nSend me 4-genio-stream-file I will share the chat stream file to the super admin of group 1 
-                    \nOnce you to this I will be sharing chats across the two groups.
+                    \n*Once you do this I will be streaming your chat across the two groups into pdf📘*.
                     \n\n🕵️‍♀️ *I am Genio*, and I am always here to serve you.🏋️‍♀️`,
                 }
               )
