@@ -23,6 +23,23 @@ var requester;
 import PDFDocument from 'pdfkit';
 var pdf; var doc; var fileName;
 
+const OAuth2Client = new google.auth.OAuth2(
+  process.env.clientID,
+  process.env.clientSecret,
+  "http://localhost"
+);
+
+OAuth2Client.setCredentials({
+  access_token: process.env.access_token,
+  refresh_token: process.env.refresh_token,
+  expiry_date: process.env.expiry_date,
+});
+
+const people = google.people({
+  version: "v1",
+  auth: OAuth2Client,
+});
+
 const writeWebinar = fs.createWriteStream(
   path.join(__dirname, "/webinar.txt"),
   {
@@ -30,21 +47,6 @@ const writeWebinar = fs.createWriteStream(
     encoding: "utf8",
   }
 );
-
-// const people  = google.people({
-//   version : 'v1',
-//   auth: process.env.peopleKey,
-//   key: process.env.peopleKey
-// });
-
-// people.people.connections.list({
-//     personFields: ["names", "emailAddresses"],
-//     resourceName: "people/me",
-//     pageSize: 10,
-//   }).then(connections=> {
-//     console.log("\n\nUser's Connections:\n");
-//     connections.forEach((c) => console.log(c));
-//   }).catch(err=>console.log(err))
 
 cloudinary.config({
   cloud_name: process.env.cloudName,
@@ -66,6 +68,8 @@ const writeFile = fs.createWriteStream(path.join(__dirname, "/server.log"), {
 });
 
 const format = ":method\t:url\t:status\t:response-time";
+
+
 
 bot.use(
   morgan(format, {
@@ -147,25 +151,49 @@ bot.post('/', async(req, res)=> {
             (searchKeywords.includes(starter[0]) ||
               parseInt(data.messages[0].body) === 0)
           ) {
-            axios
-              .post(
-                `http://localhost:8000/83430/sendMessage?token=${process.env.token}`,
-                {
-                  phone: `${parseInt(data.messages[0].author)}`,
-                  body: `
-            ${greetings[random]} *${data.messages[0].chatName}* 
-            \n${closeGreetings[closeRandom]} 
-            \n*I am Genio*, and these are the things for you:
-            \n*1. Genio-Status* \nYou send 1 \nWith this I can send you further instructions to help you upload your content to my status, and keep a Record of your shared status. 
-            \n*2. Genio-Covid* \nSend you information about Coronavirus\nSend me: 2 to get country list.
-            \n*3. Genio-Share* - Share your messages to groups.\nAdd me to two groups and I can help you share messages from one group to the other, and also generate a pdf script of your chat 
-            \nYou don't need a telegram version of your group again.
-            \nSend corresponding number to enter the mode of operation you want.
-            \n\n🕵️‍♀️ *I am Genio*, and I am here to serve you.🏋️‍♀️\n`,
-                }
-              )
-              .then((update) => (State = 0));
-          }
+              googleContacts.getContacts(
+              // { phoneNumber: "+234 902 832 0494" },
+                { phoneNumber: data.messages[0].chatName  },
+                function (err, contact) {
+                  if(contact.length< 1) {
+                    console.log(err)
+                    axios
+                      .post(
+                        `http://localhost:8000/83430/sendMessage?token=${process.env.token}`,
+                        {
+                          phone: `${parseInt(data.messages[0].author)}`,
+                          body: `
+                  ${greetings[random]} *${data.messages[0].chatName}* 
+                  \n${closeGreetings[closeRandom]} 
+                  \nI don't seem to have you on my contact kindly tell me your name so I can add you to my list.
+                  \n\n🕵️‍♀️*I am Genio*, and I am here to serve you.🏋️‍♀️\n`,
+                        }
+                      )
+                      .then((update) => (State = 6));
+                  } else {
+                    console.log(contact)
+              axios
+                .post(
+                  `http://localhost:8000/83430/sendMessage?token=${process.env.token}`,
+                  {
+                    phone: `${parseInt(data.messages[0].author)}`,
+                    body: `
+                  ${greetings[random]} *${data.messages[0].chatName}* 
+                  \n${closeGreetings[closeRandom]} 
+                  \n*I am Genio*, and these are the things for you:
+                  \n*1. Genio-Status* \nYou send 1 \nWith this I can send you further instructions to help you upload your content to my status, and keep a Record of your shared status. 
+                  \n*2. Genio-Covid* \nSend you information about Coronavirus\nSend me: 2 to get country list.
+                  \n*3. Genio-Share* - Share your messages to groups.\nAdd me to two groups and I can help you share messages from one group to the other, and also generate a pdf script of your chat 
+                  \nYou don't need a telegram version of your group again.
+                  \nSend corresponding number to enter the mode of operation you want.
+                  \n\n🕵️‍♀️ *I am Genio*, and I am here to serve you.🏋️‍♀️\n`,
+                  }
+                )
+                .then((update) => (State = 0));
+              }
+              }
+              );
+            }
           let modeKeywords = [
             "genio-status",
             "genio-util",
@@ -269,7 +297,7 @@ bot.post('/', async(req, res)=> {
                       phone: `${parseInt(data.messages[0].author)}`,
                       body: `
               Done! *${data.messages[0].chatName}* you can check my status to view your update.
-              \n *send 0 to get list of task I can run*.
+              \n *send 0 to get list of tasks I can run*.
               \n\n🕵️‍♀️ *I am Genio*, and I am always here to serve you.🏋️‍♀️ 
               `,
                     }
@@ -673,6 +701,50 @@ bot.post('/', async(req, res)=> {
                 }
               });
             }
+          }
+           if (
+            data.messages &&
+            data.messages[0].author.length < 19 &&
+            data.messages[0].body &&
+            data.messages[0].body.length > 0 &&
+            State === 6
+          ) {
+            let createData = {
+              name: data.messages[0].body,
+              phoneNumber:data.messages[0].chatName
+            };
+            googleContacts.addContact(createData, function (err, contact) {
+              if(err) {
+                console.log(err);
+              } else {
+                console.log(contact);
+                 axios
+                   .post(
+                     `http://localhost:8000/83430/sendMessage?token=${process.env.token}`,
+                     {
+                       phone: `${parseInt(data.messages[0].author)}`,
+                       body: `
+                  ${greetings[random]} *${data.messages[0].chatName}* 
+                  \n${closeGreetings[closeRandom]} 
+                  \nVoila! Your are now part of my contacts
+                  \nSend 0 to go back to task list.
+                  \n\n🕵️‍♀️ *I am Genio*, and I am here to serve you.🏋️‍♀️\n`,
+                     }
+                   )
+                   .then((update) => (State = 0))
+                   .catch(err=> {
+                     console.log(err.message);
+                     axios.post(
+                    `http://localhost:8000/83430/sendMessage?token=${process.env.token}`,
+                     {
+                       phone: `${parseInt(data.messages[0].author)}`,
+                       body: `I ran into issues saving your contact,
+                       \n Send me your name again`}
+                     )
+                   })
+                   ;
+              }
+            });
           }
           res.end();
         }catch(err) {
